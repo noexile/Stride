@@ -77,6 +77,7 @@ Each slice = its own branch + PR + review.
 | product | `.claude/agents/product.md` | PRD, requirements, scope decisions |
 | architect | `.claude/agents/architect.md` | Tech-stack comparisons, data model, system design docs |
 | ios-engineer | `.claude/agents/ios-engineer.md` | SwiftUI, SwiftData, HealthKit implementation |
+| test-engineer | `.claude/agents/test-engineer.md` | Test coverage — drives ios-engineer to fill gaps, owns coverage reporting |
 
 ## Glossary
 
