@@ -1,12 +1,12 @@
-# Sneaker Life Tracker — Session Context
+# Stride — Session Context
 
 > Generated 2026-05-04 from a planning session. Drop this into a new chat or Claude Code session to pick up where we left off. Use as the seed for `CLAUDE.md` once Claude Code is installed in this folder.
 
 ## Project at a glance
 
-- **Name:** Sneaker Life Tracker (SLT)
+- **Name:** Stride (Stride)
 - **Owner:** noexile — software developer (10 years), Apple ecosystem, enthusiast runner. First time using Claude as a tool beyond chat.
-- **Workspace folder:** `E:\project_zero\SLT\Sneaker Life Tracker`
+- **Workspace folder:** `E:\project_zero\SLT\Stride`
 - **Job-to-be-done:** Track running-shoe mileage and lifespan so I notice when to swap shoes *before* injury — Apple doesn't surface this, so I'm building it.
 - **Goal of the project (meta):** Use this small, real, personal app to learn the full Claude Code workflow — agents, slash commands, hooks, CI/CD, the deploy pipeline — before scaling to bigger projects.
 

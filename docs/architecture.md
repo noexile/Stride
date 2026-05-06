@@ -1,4 +1,4 @@
-# Sneaker Life Tracker — Architecture
+# Stride — Architecture
 
 **Date:** 2026-05-05 | **Author:** architect agent | **Status:** Locked (pending `/log-decision` entries)
 
@@ -128,7 +128,7 @@ Use `HKAnchoredObjectQuery` to fetch workouts incrementally:
 
 Single `ModelContainer` configured at app entry point with all three model types: `Shoe`, `Run`, `ShoeRunAssignment`. No manual schema version needed at launch; SwiftData infers the initial schema.
 
-iCloud sync is enabled by default when the app's bundle includes a CloudKit container entitlement. Add `com.apple.developer.icloud-containers` pointing to `iCloud.com.noexile.SneakerLifeTracker` (or equivalent) in the entitlements file. SwiftData handles CloudKit schema push automatically on first run.
+iCloud sync is enabled by default when the app's bundle includes a CloudKit container entitlement. Add `com.apple.developer.icloud-containers` pointing to `iCloud.com.noexile.Stride` (or equivalent) in the entitlements file. SwiftData handles CloudKit schema push automatically on first run.
 
 ### iCloud sync behavior and gotchas
 

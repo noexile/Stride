@@ -1,4 +1,4 @@
-# Sneaker Life Tracker
+# Stride
 
 iOS app that tracks running-shoe mileage from HealthKit — so you know when to swap shoes before you get injured.
 

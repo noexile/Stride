@@ -1,4 +1,4 @@
-# Sneaker Life Tracker — CLAUDE.md
+# Stride — CLAUDE.md
 
 Always-on context for Claude Code. Keep this ruthlessly current — every committed decision lands here.
 

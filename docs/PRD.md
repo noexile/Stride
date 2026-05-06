@@ -1,4 +1,4 @@
-# Sneaker Life Tracker — Product Requirements (v1)
+# Stride — Product Requirements (v1)
 
 **Date:** 2026-05-05 | **Owner:** noexile | **Status:** Draft
 
