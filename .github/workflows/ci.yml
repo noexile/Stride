@@ -14,28 +14,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Select Xcode
-        run: sudo xcode-select -s /Applications/Xcode.app
+      - name: Select latest Xcode
+        run: |
+          XCODE=$(ls /Applications | grep '^Xcode' | sort -r | head -1)
+          sudo xcode-select -s "/Applications/$XCODE/Contents/Developer"
+          echo "Selected: $(xcode-select -p)"
+          xcodebuild -version
+
+      - name: Show available simulators
+        run: |
+          xcrun simctl list runtimes
+          xcrun simctl list devices available | grep -E "iPhone|iPad" | head -10
 
       - name: Install xcpretty
         run: gem install xcpretty --no-document
-
-      - name: Boot simulator
-        run: |
-          SIM_ID=$(xcrun simctl list devices available -j | python3 -c "
-          import json, sys
-          data = json.load(sys.stdin)
-          for runtime, devices in data['devices'].items():
-              if 'iOS' not in runtime:
-                  continue
-              for device in devices:
-                  if device['isAvailable'] and 'iPhone' in device['name']:
-                      print(device['udid'])
-                      sys.exit(0)
-          sys.exit(1)
-          ")
-          xcrun simctl boot "$SIM_ID" || true
-          echo "Booted simulator: $SIM_ID"
 
       - name: Build & test with coverage
         run: ./scripts/generate-coverage.sh
