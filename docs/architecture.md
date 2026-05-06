@@ -22,7 +22,7 @@
 The deciding factors, in order:
 
 1. **HealthKit is the product.** Every feature in v1 touches HealthKit. A bridge that lags Apple's SDK or doesn't support background delivery is not a trade-off — it's a missing feature. Native is the only path with full, reliable access.
-2. **Apple Watch is a constraint, not a nice-to-have.** Sasho tracks workouts on Watch. React Native and Flutter cannot target watchOS. Native SwiftUI can, using the same Swift codebase and shared logic.
+2. **Apple Watch is a constraint, not a nice-to-have.** noexile tracks workouts on Watch. React Native and Flutter cannot target watchOS. Native SwiftUI can, using the same Swift codebase and shared logic.
 3. **SwiftData is already decided.** Decision 1 in `DECISIONS.md` locks SwiftData. Cross-platform frameworks cannot use it. Adding an ORM or sync layer to compensate is unnecessary complexity for a solo project.
 4. **Toolchain simplicity.** iOS-only + Xcode-required = one toolchain. Adding a second (Metro, Dart VM) for no architectural gain is pure overhead.
 5. **Skill set fit.** Ten years of general dev experience with deep Apple ecosystem familiarity is the right foundation for SwiftUI. The learning curve is the Swift language and SwiftUI idioms — both are worth learning because this is explicitly an iOS project.
@@ -128,7 +128,7 @@ Use `HKAnchoredObjectQuery` to fetch workouts incrementally:
 
 Single `ModelContainer` configured at app entry point with all three model types: `Shoe`, `Run`, `ShoeRunAssignment`. No manual schema version needed at launch; SwiftData infers the initial schema.
 
-iCloud sync is enabled by default when the app's bundle includes a CloudKit container entitlement. Add `com.apple.developer.icloud-containers` pointing to `iCloud.com.sasho.SneakerLifeTracker` (or equivalent) in the entitlements file. SwiftData handles CloudKit schema push automatically on first run.
+iCloud sync is enabled by default when the app's bundle includes a CloudKit container entitlement. Add `com.apple.developer.icloud-containers` pointing to `iCloud.com.noexile.SneakerLifeTracker` (or equivalent) in the entitlements file. SwiftData handles CloudKit schema push automatically on first run.
 
 ### iCloud sync behavior and gotchas
 

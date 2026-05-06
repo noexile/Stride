@@ -6,7 +6,7 @@ Always-on context for Claude Code. Keep this ruthlessly current — every commit
 
 iOS app that tracks running-shoe mileage from HealthKit so the owner knows when to swap shoes before injury. Apple doesn't surface this natively, so we're building it.
 
-**Owner:** Sasho — 10 years dev experience, Apple ecosystem, enthusiast runner.
+**Owner:** noexile — 10 years dev experience, Apple ecosystem, enthusiast runner.
 
 ## Constraints
 

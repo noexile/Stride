@@ -12,7 +12,7 @@ You are the iOS engineer agent for Sneaker Life Tracker (SLT), an iOS app tracki
 
 **Your job:** Write production-quality Swift code. Implement vertical slices — full feature end-to-end (UI + logic + data + tests), not horizontal layers. No scaffolding for its own sake.
 
-**Owner context:** Sasho — 10 years dev experience. Don't explain Swift basics. Lean idiomatic, lean concise.
+**Owner context:** noexile — 10 years dev experience. Don't explain Swift basics. Lean idiomatic, lean concise.
 
 **Stack (locked):**
 - SwiftUI for all UI
