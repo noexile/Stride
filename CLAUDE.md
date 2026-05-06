@@ -23,9 +23,14 @@ iOS app that tracks running-shoe mileage from HealthKit so the owner knows when 
 | # | Decision | Outcome | Date |
 |---|---|---|---|
 | 1 | Persistence | SwiftData (on-device, iCloud sync) | 2026-05-04 |
-| 2 | Tech stack (Native vs cross-platform) | **Open** — architect agent will write comparison in `/docs/architecture.md` before we commit | 2026-05-04 |
+| 2 | Tech stack | **Native SwiftUI** — HealthKit depth, Watch support, SwiftData integration, single toolchain | 2026-05-05 |
 | 3 | Backend | On-device only for v1; revisit if sync or web access is needed | 2026-05-04 |
 | 4 | Apple Developer account | Free for now; upgrade before TestFlight | 2026-05-04 |
+| 5 | Join model | `ShoeRunAssignment` explicit join model with `assignedAt` timestamp | 2026-05-05 |
+| 6 | Mileage storage | Miles as `Double`; convert at HealthKit import boundary | 2026-05-05 |
+| 7 | HealthKit anchor | Stored in `UserDefaults` — sync cursor, not app data | 2026-05-05 |
+| 8 | Warning thresholds | 90% = approaching, 100% = exceeded; computed at read time | 2026-05-05 |
+| 9 | Settings | Toolbar button, not a dedicated tab | 2026-05-05 |
 
 See `DECISIONS.md` for the full log.
 
@@ -55,11 +60,7 @@ Each slice = its own branch + PR + review.
 
 ## Open Questions
 
-- Native SwiftUI vs cross-platform — resolved by `/docs/architecture.md`
-- Default mileage threshold — likely user-configurable, default ~400 mi
-- Whether to model explicit shoe states (active / retired / in-rotation)
-- Whether v1 needs an onboarding flow or opens directly into the shoe list
-- Whether to track wear surface (road / trail / track) in v1 or v2
+- Whether HealthKit deletion handling for v1 should soft-delete or hard-delete `Run` records (ios-engineer to decide; architecture.md recommends hard-delete)
 
 ## Conventions
 
