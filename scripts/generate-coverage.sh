@@ -11,13 +11,29 @@ SCHEME="Stride"
 DERIVED_DATA="DerivedData"
 RESULT_BUNDLE="TestResults.xcresult"
 OUTPUT="sonar-coverage.xml"
-SIMULATOR="platform=iOS Simulator,name=iPhone 16,OS=latest"
+
+# Dynamically pick the first available iPhone simulator so this works
+# on any runner without hardcoding an OS version.
+echo "▶ Resolving simulator..."
+SIMULATOR_ID=$(xcrun simctl list devices available -j | python3 -c "
+import json, sys
+data = json.load(sys.stdin)
+for runtime, devices in data['devices'].items():
+    if 'iOS' not in runtime:
+        continue
+    for device in devices:
+        if device['isAvailable'] and 'iPhone' in device['name']:
+            print(device['udid'])
+            sys.exit(0)
+sys.exit(1)
+")
+echo "  Using simulator: $SIMULATOR_ID"
 
 echo "▶ Running tests with coverage..."
 xcodebuild test \
   -project Stride.xcodeproj \
   -scheme "$SCHEME" \
-  -destination "$SIMULATOR" \
+  -destination "platform=iOS Simulator,id=$SIMULATOR_ID" \
   -derivedDataPath "$DERIVED_DATA" \
   -enableCodeCoverage YES \
   -resultBundlePath "$RESULT_BUNDLE" \
