@@ -252,64 +252,72 @@ struct AssignmentInitTests {
     }
 }
 
-// MARK: - canSave / trimmedName logic  (extracted from AddShoeView for testability)
-//
-// AddShoeView.canSave = !trimmedName.isEmpty where trimmedName = name.trimmingCharacters(in: .whitespaces)
-// These tests exercise that rule directly so we don't need to instantiate the view.
+// MARK: - AddShoeViewModel
 
-@Suite("AddShoeView — canSave logic")
+@Suite("AddShoeViewModel — canSave logic")
 struct CanSaveTests {
-
-    // Helper mirrors the view's private logic
-    private func canSave(_ name: String) -> Bool {
-        !name.trimmingCharacters(in: .whitespaces).isEmpty
-    }
 
     @Test("Non-empty name allows save")
     func nonEmptyName() {
-        #expect(canSave("Nike Pegasus 41"))
+        let vm = AddShoeViewModel()
+        vm.name = "Nike Pegasus 41"
+        #expect(vm.canSave)
     }
 
     @Test("Empty string blocks save")
     func emptyString() {
-        #expect(!canSave(""))
+        let vm = AddShoeViewModel()
+        vm.name = ""
+        #expect(!vm.canSave)
     }
 
     @Test("Whitespace-only string blocks save")
     func whitespaceOnly() {
-        #expect(!canSave("   "))
+        let vm = AddShoeViewModel()
+        vm.name = "   "
+        #expect(!vm.canSave)
     }
 
     @Test("Tabs-only string blocks save")
     func tabsOnly() {
-        #expect(!canSave("\t\t"))
+        let vm = AddShoeViewModel()
+        vm.name = "\t\t"
+        #expect(!vm.canSave)
     }
 
     @Test("Mixed whitespace-only string blocks save")
     func mixedWhitespaceOnly() {
-        #expect(!canSave("  \t  "))
+        let vm = AddShoeViewModel()
+        vm.name = "  \t  "
+        #expect(!vm.canSave)
     }
 
     @Test("Name with leading/trailing whitespace is allowed (trimmed name is non-empty)")
     func leadingTrailingWhitespace() {
-        #expect(canSave("  Nike  "))
+        let vm = AddShoeViewModel()
+        vm.name = "  Nike  "
+        #expect(vm.canSave)
     }
 
     @Test("Single character name is allowed")
     func singleCharacter() {
-        #expect(canSave("A"))
+        let vm = AddShoeViewModel()
+        vm.name = "A"
+        #expect(vm.canSave)
     }
 
-    @Test("Trimmed name strips leading/trailing whitespace correctly")
+    @Test("trimmedName strips leading/trailing whitespace")
     func trimmedNameValue() {
-        let trimmed = "  Nike Pegasus  ".trimmingCharacters(in: .whitespaces)
-        #expect(trimmed == "Nike Pegasus")
+        let vm = AddShoeViewModel()
+        vm.name = "  Nike Pegasus  "
+        #expect(vm.trimmedName == "Nike Pegasus")
     }
 
-    @Test("Whitespace in the middle of the name is preserved after trim")
+    @Test("trimmedName preserves internal whitespace")
     func internalWhitespacePreserved() {
-        let trimmed = "  New Balance 1080  ".trimmingCharacters(in: .whitespaces)
-        #expect(trimmed == "New Balance 1080")
+        let vm = AddShoeViewModel()
+        vm.name = "  New Balance 1080  "
+        #expect(vm.trimmedName == "New Balance 1080")
     }
 }
 
