@@ -8,73 +8,100 @@
 import SwiftUI
 import SwiftData
 
-struct ContentView: View {
+struct ShoeListView: View {
     @Environment(\.modelContext) private var modelContext
-    @Query private var items: [Item]
+    @Query(sort: \Shoe.purchaseDate, order: .reverse) private var shoes: [Shoe]
+    @State private var showingAddShoe = false
 
     var body: some View {
-        NavigationViewWrapper {
+        NavigationStack {
             List {
-                ForEach(items) { item in
-                    NavigationLink {
-                        Text("Item at \(item.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard))")
-                    } label: {
-                        Text(item.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard))
-                    }
+                ForEach(shoes) { shoe in
+                    ShoeRowView(shoe: shoe)
                 }
-                .onDelete(perform: deleteItems)
+                .onDelete(perform: deleteShoes)
             }
-#if os(macOS)
-            .navigationSplitViewColumnWidth(min: 180, ideal: 200)
-#endif
+            .navigationTitle("My Shoes")
             .toolbar {
-#if os(iOS)
                 ToolbarItem(placement: .navigationBarTrailing) {
                     EditButton()
                 }
-#endif
-                ToolbarItem {
-                    Button(action: addItem) {
-                        Label("Add Item", systemImage: "plus")
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button {
+                        showingAddShoe = true
+                    } label: {
+                        Label("Add Shoe", systemImage: "plus")
                     }
+                }
+            }
+            .sheet(isPresented: $showingAddShoe) {
+                AddShoeView()
+            }
+            .overlay {
+                if shoes.isEmpty {
+                    ContentUnavailableView(
+                        "No Shoes",
+                        systemImage: "shoeprints.fill",
+                        description: Text("Tap + to add your first shoe.")
+                    )
                 }
             }
         }
     }
 
-    private func addItem() {
-        withAnimation {
-            let newItem = Item(timestamp: Date())
-            modelContext.insert(newItem)
-        }
-    }
-
-    private func deleteItems(offsets: IndexSet) {
+    private func deleteShoes(offsets: IndexSet) {
         withAnimation {
             for index in offsets {
-                modelContext.delete(items[index])
+                modelContext.delete(shoes[index])
             }
         }
     }
 }
 
-fileprivate struct NavigationViewWrapper<Content: View>: View {
-    let content: () -> Content
+private struct ShoeRowView: View {
+    let shoe: Shoe
 
     var body: some View {
-#if os(macOS)
-        NavigationSplitView {
-            content()
-        } detail: {
-            Text("Select an item")
+        HStack {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(shoe.name)
+                    .font(.headline)
+                Text(mileageLabel)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+            Spacer()
+            warningBadge
         }
-#else
-        content()
-#endif
+        .padding(.vertical, 4)
+    }
+
+    private var mileageLabel: String {
+        let total = shoe.totalMileage
+        let threshold = shoe.mileageThreshold
+        return String(format: "%.0f / %.0f mi", total, threshold)
+    }
+
+    @ViewBuilder
+    private var warningBadge: some View {
+        switch shoe.warningState {
+        case .ok:
+            EmptyView()
+        case .approaching:
+            Label("Approaching", systemImage: "exclamationmark.triangle.fill")
+                .labelStyle(.iconOnly)
+                .foregroundStyle(.yellow)
+                .imageScale(.large)
+        case .exceeded:
+            Label("Exceeded", systemImage: "exclamationmark.octagon.fill")
+                .labelStyle(.iconOnly)
+                .foregroundStyle(.red)
+                .imageScale(.large)
+        }
     }
 }
 
 #Preview {
-    ContentView()
-        .modelContainer(for: Item.self, inMemory: true)
+    ShoeListView()
+        .modelContainer(for: [Shoe.self, Run.self, ShoeRunAssignment.self], inMemory: true)
 }

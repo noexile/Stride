@@ -12,7 +12,9 @@ import SwiftData
 struct StrideApp: App {
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
-            Item.self,
+            Shoe.self,
+            Run.self,
+            ShoeRunAssignment.self,
         ])
         let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
 
@@ -25,7 +27,7 @@ struct StrideApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            ShoeListView()
         }
         .modelContainer(sharedModelContainer)
     }
