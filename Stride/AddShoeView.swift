@@ -10,7 +10,10 @@ import SwiftData
 final class AddShoeViewModel {
     var name = ""
     var purchaseDate = Date.now
-    var mileageThreshold = 400.0
+    var mileageThreshold: Double = {
+        let stored = UserDefaults.standard.double(forKey: "settings.defaultThreshold")
+        return stored == 0 ? 400.0 : stored
+    }()
 
     var trimmedName: String { name.trimmingCharacters(in: .whitespaces) }
     var canSave: Bool { !trimmedName.isEmpty }
