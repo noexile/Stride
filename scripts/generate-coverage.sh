@@ -30,6 +30,7 @@ sys.exit(1)
 echo "  Using simulator: $SIMULATOR_ID"
 
 echo "▶ Running tests with coverage..."
+set +e
 xcodebuild test \
   -project Stride.xcodeproj \
   -scheme "$SCHEME" \
@@ -37,7 +38,13 @@ xcodebuild test \
   -derivedDataPath "$DERIVED_DATA" \
   -enableCodeCoverage YES \
   -resultBundlePath "$RESULT_BUNDLE" \
-  2>&1 | grep -E "^(Build|Compile|Test|error:|warning: |FAILED|Executed|Stride)" || true
+  2>&1 | grep -E "(^(Build|Compile|Test|FAILED|Executed)| error:| warning:|Testing)" || true
+XCODEBUILD_EXIT=${PIPESTATUS[0]}
+set -e
+if [ "$XCODEBUILD_EXIT" -ne 0 ]; then
+  echo "✗ xcodebuild exited with code $XCODEBUILD_EXIT"
+  exit "$XCODEBUILD_EXIT"
+fi
 
 echo "▶ Extracting coverage JSON..."
 xcrun xccov view \
