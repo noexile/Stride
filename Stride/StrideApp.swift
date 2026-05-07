@@ -27,7 +27,14 @@ struct StrideApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ShoeListView()
+            TabView {
+                Tab("Shoes", systemImage: "shoeprints.fill") {
+                    ShoeListView()
+                }
+                Tab("Runs", systemImage: "figure.run") {
+                    RunsView()
+                }
+            }
         }
         .modelContainer(sharedModelContainer)
     }
