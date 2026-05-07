@@ -12,6 +12,7 @@ struct ShoeListView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \Shoe.purchaseDate, order: .reverse) private var shoes: [Shoe]
     @State private var showingAddShoe = false
+    @State private var showingSettings = false
 
     var body: some View {
         NavigationStack {
@@ -28,6 +29,13 @@ struct ShoeListView: View {
             }
             .navigationTitle("My Shoes")
             .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button {
+                        showingSettings = true
+                    } label: {
+                        Label("Settings", systemImage: "gear")
+                    }
+                }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     EditButton()
                 }
@@ -41,6 +49,9 @@ struct ShoeListView: View {
             }
             .sheet(isPresented: $showingAddShoe) {
                 AddShoeView()
+            }
+            .sheet(isPresented: $showingSettings) {
+                SettingsView()
             }
             .overlay {
                 if shoes.isEmpty {

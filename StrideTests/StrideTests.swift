@@ -1378,6 +1378,112 @@ struct DistanceConversionTests {
     }
 }
 
+// MARK: - SettingsViewModel
+
+@Suite("SettingsViewModel — defaultThreshold")
+struct SettingsViewModelTests {
+
+    // Use a dedicated key for tests so we never pollute real user preferences.
+    // We reset after each relevant test manually.
+    private let testKey = "settings.defaultThreshold"
+
+    @Test("Default value is 400 when UserDefaults has no stored value")
+    func defaultIs400() {
+        UserDefaults.standard.removeObject(forKey: testKey)
+        let vm = SettingsViewModel()
+        #expect(vm.defaultThreshold == 400.0)
+    }
+
+    @Test("Clamping below 100 stores 100")
+    func clampBelow100() {
+        UserDefaults.standard.removeObject(forKey: testKey)
+        let vm = SettingsViewModel()
+        vm.defaultThreshold = 50.0
+        #expect(vm.defaultThreshold == 100.0)
+        UserDefaults.standard.removeObject(forKey: testKey)
+    }
+
+    @Test("Clamping above 1000 stores 1000")
+    func clampAbove1000() {
+        UserDefaults.standard.removeObject(forKey: testKey)
+        let vm = SettingsViewModel()
+        vm.defaultThreshold = 1500.0
+        #expect(vm.defaultThreshold == 1000.0)
+        UserDefaults.standard.removeObject(forKey: testKey)
+    }
+
+    @Test("Value within range is stored as-is")
+    func withinRangeStoredAsIs() {
+        UserDefaults.standard.removeObject(forKey: testKey)
+        let vm = SettingsViewModel()
+        vm.defaultThreshold = 600.0
+        #expect(vm.defaultThreshold == 600.0)
+        UserDefaults.standard.removeObject(forKey: testKey)
+    }
+
+    @Test("Written value persists to UserDefaults and round-trips correctly")
+    func persistenceRoundTrip() {
+        UserDefaults.standard.removeObject(forKey: testKey)
+        let vm = SettingsViewModel()
+        vm.defaultThreshold = 750.0
+
+        // A second SettingsViewModel instance reads from the same UserDefaults key.
+        let vm2 = SettingsViewModel()
+        #expect(vm2.defaultThreshold == 750.0)
+        UserDefaults.standard.removeObject(forKey: testKey)
+    }
+
+    @Test("Boundary value 100 is accepted without clamping")
+    func boundaryLow() {
+        UserDefaults.standard.removeObject(forKey: testKey)
+        let vm = SettingsViewModel()
+        vm.defaultThreshold = 100.0
+        #expect(vm.defaultThreshold == 100.0)
+        UserDefaults.standard.removeObject(forKey: testKey)
+    }
+
+    @Test("Boundary value 1000 is accepted without clamping")
+    func boundaryHigh() {
+        UserDefaults.standard.removeObject(forKey: testKey)
+        let vm = SettingsViewModel()
+        vm.defaultThreshold = 1000.0
+        #expect(vm.defaultThreshold == 1000.0)
+        UserDefaults.standard.removeObject(forKey: testKey)
+    }
+}
+
+// MARK: - AddShoeViewModel — UserDefaults default threshold
+
+@Suite("AddShoeViewModel — UserDefaults default threshold")
+struct AddShoeViewModelDefaultThresholdTests {
+
+    private let testKey = "settings.defaultThreshold"
+
+    @Test("Initialises with 400 when UserDefaults has no stored value")
+    func defaultsTo400WhenNoUserDefaults() {
+        UserDefaults.standard.removeObject(forKey: testKey)
+        let vm = AddShoeViewModel()
+        #expect(vm.mileageThreshold == 400.0)
+    }
+
+    @Test("Initialises with the custom threshold stored in UserDefaults")
+    func readsCustomThresholdFromUserDefaults() {
+        UserDefaults.standard.set(650.0, forKey: testKey)
+        let vm = AddShoeViewModel()
+        #expect(vm.mileageThreshold == 650.0)
+        UserDefaults.standard.removeObject(forKey: testKey)
+    }
+
+    @Test("Initialises with 400 when UserDefaults returns 0 (key missing)")
+    func defaultsTo400WhenUserDefaultsReturnsZero() {
+        // double(forKey:) returns 0.0 when the key is absent
+        UserDefaults.standard.removeObject(forKey: testKey)
+        #expect(UserDefaults.standard.double(forKey: testKey) == 0.0)
+        let vm = AddShoeViewModel()
+        #expect(vm.mileageThreshold == 400.0)
+    }
+}
+
 // MARK: - MockHealthKitService — deduplication via context
 
 @Suite("Import deduplication via MockHealthKitService")
