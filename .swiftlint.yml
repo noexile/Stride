@@ -1,0 +1,45 @@
+included:
+  - Stride
+  - StrideTests
+  - StrideUITests
+
+excluded:
+  - DerivedData
+
+disabled_rules:
+  - trailing_whitespace        # Xcode manages this
+  - todo                       # TODOs are fine during active development
+  - static_over_final_class    # final class + static is stylistic
+  - comma                      # alignment spacing in test data is intentional
+  - trailing_comma             # Swift trailing commas are idiomatic in multi-line literals
+
+opt_in_rules:
+  - empty_count                # prefer isEmpty over count == 0
+  - force_unwrapping           # flag force-unwraps
+
+line_length:
+  warning: 150
+  error: 200
+  ignores_comments: true
+  ignores_urls: true
+
+type_body_length:
+  warning: 250
+  error: 400
+
+file_length:
+  warning: 1500
+  error: 2000
+
+function_body_length:
+  warning: 50
+  error: 100
+
+identifier_name:
+  min_length: 2
+  excluded:
+    - id
+    - vm
+    - db
+
+reporter: "github-actions-logging"

@@ -90,8 +90,8 @@ struct ShoeTotalMileageTests {
     @Test("Many assignments accumulate correctly")
     func manyAssignments() {
         let shoe = Shoe(name: "Workhorse")
-        shoe.assignments = (1...10).map { i in
-            ShoeRunAssignment(shoe: shoe, run: makeRun(miles: Double(i)))
+        shoe.assignments = (1...10).map { idx in
+            ShoeRunAssignment(shoe: shoe, run: makeRun(miles: Double(idx)))
         }
         // 1+2+...+10 = 55
         #expect(shoe.totalMileage == 55.0)
@@ -561,12 +561,12 @@ struct RunReassignmentTests {
         context.insert(ShoeRunAssignment(shoe: shoeB, run: run))
         try context.save()
 
-        let shoes = try context.fetch(FetchDescriptor<Shoe>())
-        let a = shoes.first(where: { $0.name == "Shoe A" })!
-        let b = shoes.first(where: { $0.name == "Shoe B" })!
+        let fetched = try context.fetch(FetchDescriptor<Shoe>())
+        let fetchedA = try #require(fetched.first(where: { $0.name == "Shoe A" }))
+        let fetchedB = try #require(fetched.first(where: { $0.name == "Shoe B" }))
 
-        #expect(a.assignments.count == 0)
-        #expect(b.assignments.count == 1)
+        #expect(fetchedA.assignments.isEmpty)
+        #expect(fetchedB.assignments.count == 1)
     }
 
     @Test("Re-assigning deletes the old ShoeRunAssignment from the store")
@@ -616,12 +616,12 @@ struct RunReassignmentTests {
         context.insert(ShoeRunAssignment(shoe: shoeB, run: run))
         try context.save()
 
-        let shoes = try context.fetch(FetchDescriptor<Shoe>())
-        let a = shoes.first(where: { $0.name == "Shoe A" })!
-        let b = shoes.first(where: { $0.name == "Shoe B" })!
+        let fetched = try context.fetch(FetchDescriptor<Shoe>())
+        let fetchedA = try #require(fetched.first(where: { $0.name == "Shoe A" }))
+        let fetchedB = try #require(fetched.first(where: { $0.name == "Shoe B" }))
 
-        #expect(a.totalMileage == 0.0)
-        #expect(b.totalMileage == 8.0)
+        #expect(fetchedA.totalMileage == 0.0)
+        #expect(fetchedB.totalMileage == 8.0)
     }
 }
 
