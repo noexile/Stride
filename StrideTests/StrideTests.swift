@@ -562,10 +562,10 @@ struct RunReassignmentTests {
         try context.save()
 
         let shoes = try context.fetch(FetchDescriptor<Shoe>())
-        let a = shoes.first(where: { $0.name == "Shoe A" })!
-        let b = shoes.first(where: { $0.name == "Shoe B" })!
+        let a = try #require(shoes.first(where: { $0.name == "Shoe A" }))
+        let b = try #require(shoes.first(where: { $0.name == "Shoe B" }))
 
-        #expect(a.assignments.count == 0)
+        #expect(a.assignments.isEmpty)
         #expect(b.assignments.count == 1)
     }
 
@@ -617,8 +617,8 @@ struct RunReassignmentTests {
         try context.save()
 
         let shoes = try context.fetch(FetchDescriptor<Shoe>())
-        let a = shoes.first(where: { $0.name == "Shoe A" })!
-        let b = shoes.first(where: { $0.name == "Shoe B" })!
+        let a = try #require(shoes.first(where: { $0.name == "Shoe A" }))
+        let b = try #require(shoes.first(where: { $0.name == "Shoe B" }))
 
         #expect(a.totalMileage == 0.0)
         #expect(b.totalMileage == 8.0)
