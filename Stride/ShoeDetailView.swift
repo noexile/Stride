@@ -1,4 +1,5 @@
 import SwiftUI
+import SwiftData
 
 struct ShoeDetailView: View {
     let shoe: Shoe
