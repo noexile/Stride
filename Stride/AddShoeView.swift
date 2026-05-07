@@ -6,36 +6,49 @@
 import SwiftUI
 import SwiftData
 
+@Observable
+final class AddShoeViewModel {
+    var name = ""
+    var purchaseDate = Date.now
+    var mileageThreshold = 400.0
+
+    var trimmedName: String { name.trimmingCharacters(in: .whitespaces) }
+    var canSave: Bool { !trimmedName.isEmpty }
+
+    func save(context: ModelContext) {
+        let shoe = Shoe(
+            name: trimmedName,
+            purchaseDate: purchaseDate,
+            mileageThreshold: mileageThreshold
+        )
+        context.insert(shoe)
+    }
+}
+
 struct AddShoeView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
-
-    @State private var name = ""
-    @State private var purchaseDate = Date.now
-    @State private var mileageThreshold = 400.0
-
-    private var trimmedName: String { name.trimmingCharacters(in: .whitespaces) }
-    private var canSave: Bool { !trimmedName.isEmpty }
+    @State private var viewModel = AddShoeViewModel()
 
     var body: some View {
         NavigationStack {
             Form {
                 Section("Shoe") {
-                    TextField("Name (e.g. Nike Pegasus 41)", text: $name)
+                    TextField("Name (e.g. Nike Pegasus 41)", text: $viewModel.name)
                         .autocorrectionDisabled()
-                    DatePicker("Purchase Date", selection: $purchaseDate, displayedComponents: .date)
+                    DatePicker("Purchase Date", selection: $viewModel.purchaseDate, displayedComponents: .date)
                 }
 
                 Section("Mileage Threshold") {
                     Stepper(
-                        value: $mileageThreshold,
+                        value: $viewModel.mileageThreshold,
                         in: 100...1000,
                         step: 50
                     ) {
                         HStack {
                             Text("Threshold")
                             Spacer()
-                            Text("\(Int(mileageThreshold)) mi")
+                            Text("\(Int(viewModel.mileageThreshold)) mi")
                                 .foregroundStyle(.secondary)
                         }
                     }
@@ -48,21 +61,14 @@ struct AddShoeView: View {
                     Button("Cancel") { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") { save() }
-                        .disabled(!canSave)
+                    Button("Save") {
+                        viewModel.save(context: modelContext)
+                        dismiss()
+                    }
+                    .disabled(!viewModel.canSave)
                 }
             }
         }
-    }
-
-    private func save() {
-        let shoe = Shoe(
-            name: trimmedName,
-            purchaseDate: purchaseDate,
-            mileageThreshold: mileageThreshold
-        )
-        modelContext.insert(shoe)
-        dismiss()
     }
 }
 

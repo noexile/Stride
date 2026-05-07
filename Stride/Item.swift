@@ -43,6 +43,7 @@ final class Shoe {
         status: ShoeStatus = .active,
         notes: String? = nil
     ) {
+        precondition(mileageThreshold > 0, "mileageThreshold must be positive")
         self.id = UUID()
         self.name = name
         self.purchaseDate = purchaseDate

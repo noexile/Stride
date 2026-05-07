@@ -15,15 +15,33 @@ from xml.etree.ElementTree import Element, SubElement, tostring
 from xml.dom.minidom import parseString
 
 
+def file_entries(data):
+    """
+    xccov --files-for-target --json returns a top-level list of file objects.
+    xccov --report --json returns a dict with a 'targets' or 'files' key.
+    Handle both.
+    """
+    if isinstance(data, list):
+        return data
+    if isinstance(data, dict):
+        # --report format: { "targets": [{ "files": [...] }] }
+        if "targets" in data:
+            entries = []
+            for target in data["targets"]:
+                entries.extend(target.get("files", []))
+            return entries
+        return data.get("files", [])
+    return []
+
+
 def convert(input_path: str, output_path: str) -> None:
     with open(input_path) as f:
         data = json.load(f)
 
     coverage = Element("coverage", version="1")
 
-    for file_entry in data.get("files", []):
+    for file_entry in file_entries(data):
         file_path = file_entry.get("path", "")
-        # Make path relative to repo root
         try:
             rel_path = str(Path(file_path).relative_to(Path.cwd()))
         except ValueError:
@@ -32,16 +50,16 @@ def convert(input_path: str, output_path: str) -> None:
         file_elem = SubElement(coverage, "file", path=rel_path)
 
         for line in file_entry.get("functions", []):
-            for line_num in range(
-                line.get("lineNumber", 0),
-                line.get("lineNumber", 0) + line.get("lineCount", 1),
-            ):
+            start = line.get("lineNumber", 0)
+            count = line.get("lineCount", 1)
+            executed = line.get("executionCount", 0) > 0
+            for line_num in range(start, start + count):
                 if line_num > 0:
                     SubElement(
                         file_elem,
                         "lineToCover",
                         lineNumber=str(line_num),
-                        covered=str(line.get("executionCount", 0) > 0).lower(),
+                        covered=str(executed).lower(),
                     )
 
     xml_str = parseString(tostring(coverage)).toprettyxml(indent="  ")
