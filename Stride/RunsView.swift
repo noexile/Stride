@@ -97,7 +97,7 @@ private struct RunRowView: View {
                 if let shoe = run.assignment?.shoe {
                     Label(shoe.name, systemImage: "shoeprints.fill")
                         .font(.caption)
-                        .foregroundStyle(.accent)
+                        .foregroundStyle(.tint)
                 } else {
                     Text("Tap to assign shoe")
                         .font(.caption)
