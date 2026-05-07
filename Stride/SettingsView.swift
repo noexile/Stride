@@ -7,15 +7,19 @@ import SwiftUI
 
 @Observable
 final class SettingsViewModel {
-    private let key = "settings.defaultThreshold"
+    private let defaults: UserDefaults
+
+    init(defaults: UserDefaults = .standard) {
+        self.defaults = defaults
+    }
 
     var defaultThreshold: Double {
         get {
-            let stored = UserDefaults.standard.double(forKey: key)
+            let stored = defaults.double(forKey: UserDefaultsKeys.defaultThreshold)
             return stored == 0 ? 400.0 : stored
         }
         set {
-            UserDefaults.standard.set(newValue.clamped(to: 100...1000), forKey: key)
+            defaults.set(newValue.clamped(to: 100...1000), forKey: UserDefaultsKeys.defaultThreshold)
         }
     }
 }
