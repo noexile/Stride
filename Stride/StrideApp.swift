@@ -10,13 +10,14 @@ import SwiftData
 
 @main
 struct StrideApp: App {
-    var sharedModelContainer: ModelContainer = {
+    let sharedModelContainer: ModelContainer = {
         let schema = Schema([
             Shoe.self,
             Run.self,
             ShoeRunAssignment.self,
         ])
-        let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
+        let inMemory = ProcessInfo.processInfo.arguments.contains("--uitesting")
+        let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: inMemory)
 
         do {
             return try ModelContainer(for: schema, configurations: [modelConfiguration])

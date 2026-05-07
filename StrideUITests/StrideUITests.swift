@@ -15,9 +15,10 @@ final class StrideUITests: XCTestCase {
 
     // MARK: - Helpers
 
-    /// Launch a clean instance of the app.
+    /// Launch the app with an in-memory SwiftData store so each test starts clean.
     private func launchApp() -> XCUIApplication {
         let app = XCUIApplication()
+        app.launchArguments = ["--uitesting"]
         app.launch()
         return app
     }

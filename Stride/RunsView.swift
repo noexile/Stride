@@ -69,7 +69,10 @@ struct RunsView: View {
             .sheet(item: $assigningRun) { run in
                 AssignRunView(run: run)
             }
-            .alert("Sync Error", isPresented: .constant(viewModel.errorMessage != nil)) {
+            .alert("Sync Error", isPresented: Binding(
+                get: { viewModel.errorMessage != nil },
+                set: { if !$0 { viewModel.errorMessage = nil } }
+            )) {
                 Button("OK") { viewModel.errorMessage = nil }
             } message: {
                 Text(viewModel.errorMessage ?? "")

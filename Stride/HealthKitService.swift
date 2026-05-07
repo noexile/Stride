@@ -35,7 +35,7 @@ final class HealthKitService: HealthKitServiceProtocol {
         let (workouts, newAnchor) = try await fetchWorkouts(predicate: predicate, anchor: anchor)
 
         let existingIds = Set(
-            (try? context.fetch(FetchDescriptor<Run>()))?.map(\.healthKitWorkoutId) ?? []
+            try context.fetch(FetchDescriptor<Run>()).map(\.healthKitWorkoutId)
         )
 
         let newRuns = workouts
