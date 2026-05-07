@@ -1,0 +1,45 @@
+included:
+  - Stride
+  - StrideTests
+  - StrideUITests
+
+excluded:
+  - DerivedData
+
+disabled_rules:
+  - trailing_whitespace        # Xcode manages this
+  - todo                       # TODOs are fine during active development
+
+opt_in_rules:
+  - empty_count                # prefer isEmpty over count == 0
+  - force_unwrapping           # flag force-unwraps
+  - implicitly_unwrapped_optional
+  - private_outlet
+  - sorted_imports
+
+line_length:
+  warning: 120
+  error: 200
+  ignores_comments: true
+  ignores_urls: true
+
+type_body_length:
+  warning: 250
+  error: 400
+
+file_length:
+  warning: 500
+  error: 800
+
+function_body_length:
+  warning: 50
+  error: 100
+
+identifier_name:
+  min_length: 2
+  excluded:
+    - id
+    - vm
+    - db
+
+reporter: "github-actions-logging"

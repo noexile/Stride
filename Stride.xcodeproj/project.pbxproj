@@ -188,6 +188,11 @@
 				TargetAttributes = {
 					C0C52CFA2FABAD0C0079DD2B = {
 						CreatedOnToolsVersion = 26.4.1;
+						SystemCapabilities = {
+							com.apple.HealthKit = {
+								enabled = 1;
+							};
+						};
 					};
 					C0C52D0B2FABAD0E0079DD2B = {
 						CreatedOnToolsVersion = 26.4.1;

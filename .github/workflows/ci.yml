@@ -28,14 +28,17 @@ jobs:
           restore-keys: |
             derived-data-${{ runner.os }}-
 
-      - name: Cache sonar-scanner
+      - name: Cache Homebrew downloads
         uses: actions/cache@v4
         with:
           path: ~/Library/Caches/Homebrew/downloads
-          key: brew-sonar-scanner-${{ runner.os }}
+          key: brew-tools-${{ runner.os }}
 
-      - name: Install sonar-scanner
-        run: brew install sonar-scanner
+      - name: Install tools
+        run: brew install sonar-scanner swiftlint
+
+      - name: SwiftLint
+        run: swiftlint lint --strict
 
       - name: Build & test with coverage
         run: ./scripts/generate-coverage.sh
