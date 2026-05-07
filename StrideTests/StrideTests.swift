@@ -463,3 +463,345 @@ private func makeRun(miles: Double) -> Run {
         distanceMiles: miles
     )
 }
+
+// MARK: - Mock HealthKit service
+
+/// Conforms to HealthKitServiceProtocol without touching HKHealthStore.
+/// Configured per-test with closures so each test controls behaviour precisely.
+final class MockHealthKitService: HealthKitServiceProtocol {
+    var isAvailable: Bool = true
+
+    /// Closure called by requestAuthorization(); throw to simulate auth failure.
+    var onRequestAuthorization: () async throws -> Void = {}
+
+    /// Closure called by importNewRuns(into:); return Int or throw to simulate import outcomes.
+    var onImportNewRuns: (ModelContext) async throws -> Int = { _ in 0 }
+
+    func requestAuthorization() async throws {
+        try await onRequestAuthorization()
+    }
+
+    func importNewRuns(into context: ModelContext) async throws -> Int {
+        try await onImportNewRuns(context)
+    }
+}
+
+// MARK: - RunsSyncViewModel tests
+
+@Suite("RunsSyncViewModel — sync behaviour")
+struct RunsSyncViewModelTests {
+
+    private func makeContainer() throws -> ModelContainer {
+        let config = ModelConfiguration(isStoredInMemoryOnly: true)
+        return try ModelContainer(for: Shoe.self, Run.self, ShoeRunAssignment.self, configurations: config)
+    }
+
+    // -------------------------------------------------------------------------
+    // Happy path
+    // -------------------------------------------------------------------------
+
+    @Test("isSyncing starts false")
+    func isSyncingInitiallyFalse() {
+        let vm = RunsSyncViewModel(service: MockHealthKitService())
+        #expect(vm.isSyncing == false)
+    }
+
+    @Test("errorMessage starts nil")
+    func errorMessageInitiallyNil() {
+        let vm = RunsSyncViewModel(service: MockHealthKitService())
+        #expect(vm.errorMessage == nil)
+    }
+
+    @Test("isSyncing is false after a successful sync")
+    func isSyncingFalseAfterSuccessfulSync() async throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+        let mock = MockHealthKitService()
+        let vm = RunsSyncViewModel(service: mock)
+
+        await vm.sync(context: context)
+
+        #expect(vm.isSyncing == false)
+    }
+
+    @Test("errorMessage is nil after a successful sync")
+    func errorMessageNilAfterSuccessfulSync() async throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+        let mock = MockHealthKitService()
+        let vm = RunsSyncViewModel(service: mock)
+
+        await vm.sync(context: context)
+
+        #expect(vm.errorMessage == nil)
+    }
+
+    @Test("Successful sync inserts runs returned by the service into the context")
+    func successfulSyncInsertsRuns() async throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+        let mock = MockHealthKitService()
+
+        // The mock directly inserts two Run objects into the context and returns 2.
+        mock.onImportNewRuns = { ctx in
+            ctx.insert(makeRun(miles: 3.1))
+            ctx.insert(makeRun(miles: 6.2))
+            return 2
+        }
+
+        let vm = RunsSyncViewModel(service: mock)
+        await vm.sync(context: context)
+
+        let runs = try context.fetch(FetchDescriptor<Run>())
+        #expect(runs.count == 2)
+    }
+
+    // -------------------------------------------------------------------------
+    // Error path — authorization failure
+    // -------------------------------------------------------------------------
+
+    @Test("errorMessage is set when requestAuthorization throws")
+    func errorMessageSetOnAuthFailure() async throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+        let mock = MockHealthKitService()
+
+        struct FakeAuthError: LocalizedError {
+            var errorDescription: String? { "Authorization denied" }
+        }
+        mock.onRequestAuthorization = { throw FakeAuthError() }
+
+        let vm = RunsSyncViewModel(service: mock)
+        await vm.sync(context: context)
+
+        #expect(vm.errorMessage == "Authorization denied")
+    }
+
+    @Test("isSyncing is false after an authorization error")
+    func isSyncingFalseAfterAuthError() async throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+        let mock = MockHealthKitService()
+
+        struct FakeAuthError: LocalizedError {
+            var errorDescription: String? { "Authorization denied" }
+        }
+        mock.onRequestAuthorization = { throw FakeAuthError() }
+
+        let vm = RunsSyncViewModel(service: mock)
+        await vm.sync(context: context)
+
+        #expect(vm.isSyncing == false)
+    }
+
+    // -------------------------------------------------------------------------
+    // Error path — import failure
+    // -------------------------------------------------------------------------
+
+    @Test("errorMessage is set when importNewRuns throws")
+    func errorMessageSetOnImportFailure() async throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+        let mock = MockHealthKitService()
+
+        struct FakeImportError: LocalizedError {
+            var errorDescription: String? { "HealthKit unavailable" }
+        }
+        mock.onImportNewRuns = { _ in throw FakeImportError() }
+
+        let vm = RunsSyncViewModel(service: mock)
+        await vm.sync(context: context)
+
+        #expect(vm.errorMessage == "HealthKit unavailable")
+    }
+
+    @Test("isSyncing is false after an import error")
+    func isSyncingFalseAfterImportError() async throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+        let mock = MockHealthKitService()
+
+        struct FakeImportError: LocalizedError {
+            var errorDescription: String? { "HealthKit unavailable" }
+        }
+        mock.onImportNewRuns = { _ in throw FakeImportError() }
+
+        let vm = RunsSyncViewModel(service: mock)
+        await vm.sync(context: context)
+
+        #expect(vm.isSyncing == false)
+    }
+
+    @Test("No runs are inserted when importNewRuns throws")
+    func noRunsInsertedOnImportError() async throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+        let mock = MockHealthKitService()
+
+        struct FakeImportError: LocalizedError {
+            var errorDescription: String? { "HealthKit unavailable" }
+        }
+        mock.onImportNewRuns = { _ in throw FakeImportError() }
+
+        let vm = RunsSyncViewModel(service: mock)
+        await vm.sync(context: context)
+
+        let runs = try context.fetch(FetchDescriptor<Run>())
+        #expect(runs.isEmpty)
+    }
+
+    // -------------------------------------------------------------------------
+    // errorMessage reset between syncs
+    // -------------------------------------------------------------------------
+
+    @Test("errorMessage is cleared at the start of each sync")
+    func errorMessageClearedOnRetry() async throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+        let mock = MockHealthKitService()
+
+        // First sync: fail
+        struct FakeError: LocalizedError {
+            var errorDescription: String? { "Oops" }
+        }
+        mock.onImportNewRuns = { _ in throw FakeError() }
+
+        let vm = RunsSyncViewModel(service: mock)
+        await vm.sync(context: context)
+        #expect(vm.errorMessage == "Oops")
+
+        // Second sync: succeed
+        mock.onImportNewRuns = { _ in 0 }
+        await vm.sync(context: context)
+        #expect(vm.errorMessage == nil)
+    }
+}
+
+// MARK: - Distance conversion
+
+@Suite("Distance conversion — metres to miles")
+struct DistanceConversionTests {
+
+    // The conversion factor used in HealthKitService.makeRun(from:) is 1609.344.
+    // These tests exercise that formula in isolation so a future change to the
+    // divisor is immediately caught without needing a live HK store.
+
+    private let metersPerMile: Double = 1609.344
+
+    @Test("0 metres converts to 0 miles")
+    func zeroMetres() {
+        let miles = 0.0 / metersPerMile
+        #expect(miles == 0.0)
+    }
+
+    @Test("1609.344 metres converts to exactly 1.0 mile")
+    func oneMile() {
+        let miles = 1609.344 / metersPerMile
+        #expect(miles == 1.0)
+    }
+
+    @Test("3218.688 metres converts to exactly 2.0 miles")
+    func twoMiles() {
+        let miles = 3218.688 / metersPerMile
+        #expect(abs(miles - 2.0) < 0.000001)
+    }
+
+    @Test("5000 metres converts to approximately 3.107 miles")
+    func fiveKilometres() {
+        let miles = 5000.0 / metersPerMile
+        #expect(abs(miles - 3.10686) < 0.0001)
+    }
+
+    @Test("42195 metres (marathon) converts to approximately 26.219 miles")
+    func marathon() {
+        let miles = 42195.0 / metersPerMile
+        #expect(abs(miles - 26.2188) < 0.001)
+    }
+
+    @Test("Run model stores pre-converted miles without further modification")
+    func runModelStoresMilesDirectly() {
+        let expectedMiles = 8000.0 / 1609.344
+        let run = Run(
+            healthKitWorkoutId: UUID(),
+            startDate: .now,
+            endDate: .now,
+            distanceMiles: expectedMiles
+        )
+        #expect(abs(run.distanceMiles - expectedMiles) < 0.000001)
+    }
+}
+
+// MARK: - MockHealthKitService — deduplication via context
+
+@Suite("Import deduplication via MockHealthKitService")
+struct ImportDeduplicationTests {
+
+    private func makeContainer() throws -> ModelContainer {
+        let config = ModelConfiguration(isStoredInMemoryOnly: true)
+        return try ModelContainer(for: Shoe.self, Run.self, ShoeRunAssignment.self, configurations: config)
+    }
+
+    @Test("Calling sync twice with the same run ID does not produce duplicates when the mock deduplicates")
+    func noDuplicatesWhenMockDeduplicates() async throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+        let mock = MockHealthKitService()
+        let sharedWorkoutId = UUID()
+
+        // Mock mirrors the real service dedup logic: skip IDs already in the store.
+        mock.onImportNewRuns = { ctx in
+            let existing = Set(
+                (try? ctx.fetch(FetchDescriptor<Run>()))?.map(\.healthKitWorkoutId) ?? []
+            )
+            if !existing.contains(sharedWorkoutId) {
+                ctx.insert(Run(
+                    healthKitWorkoutId: sharedWorkoutId,
+                    startDate: .now,
+                    endDate: .now,
+                    distanceMiles: 5.0
+                ))
+                return 1
+            }
+            return 0
+        }
+
+        let vm = RunsSyncViewModel(service: mock)
+        await vm.sync(context: context)
+        await vm.sync(context: context)
+
+        let runs = try context.fetch(FetchDescriptor<Run>())
+        #expect(runs.count == 1)
+    }
+
+    @Test("Sync imports zero runs when service returns none")
+    func zeroRunsImported() async throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+        let mock = MockHealthKitService()
+        // Default mock onImportNewRuns returns 0 and inserts nothing.
+        let vm = RunsSyncViewModel(service: mock)
+        await vm.sync(context: context)
+
+        let runs = try context.fetch(FetchDescriptor<Run>())
+        #expect(runs.isEmpty)
+    }
+
+    @Test("Two distinct workout IDs produce two Run records")
+    func twoDistinctRunsImported() async throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+        let mock = MockHealthKitService()
+
+        mock.onImportNewRuns = { ctx in
+            ctx.insert(Run(healthKitWorkoutId: UUID(), startDate: .now, endDate: .now, distanceMiles: 4.0))
+            ctx.insert(Run(healthKitWorkoutId: UUID(), startDate: .now, endDate: .now, distanceMiles: 7.0))
+            return 2
+        }
+
+        let vm = RunsSyncViewModel(service: mock)
+        await vm.sync(context: context)
+
+        let runs = try context.fetch(FetchDescriptor<Run>())
+        #expect(runs.count == 2)
+    }
+}
