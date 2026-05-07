@@ -90,8 +90,8 @@ struct ShoeTotalMileageTests {
     @Test("Many assignments accumulate correctly")
     func manyAssignments() {
         let shoe = Shoe(name: "Workhorse")
-        shoe.assignments = (1...10).map { i in
-            ShoeRunAssignment(shoe: shoe, run: makeRun(miles: Double(i)))
+        shoe.assignments = (1...10).map { idx in
+            ShoeRunAssignment(shoe: shoe, run: makeRun(miles: Double(idx)))
         }
         // 1+2+...+10 = 55
         #expect(shoe.totalMileage == 55.0)
@@ -562,11 +562,11 @@ struct RunReassignmentTests {
         try context.save()
 
         let shoes = try context.fetch(FetchDescriptor<Shoe>())
-        let a = try #require(shoes.first(where: { $0.name == "Shoe A" }))
-        let b = try #require(shoes.first(where: { $0.name == "Shoe B" }))
+        let shoeA = try #require(shoes.first(where: { $0.name == "Shoe A" }))
+        let shoeB = try #require(shoes.first(where: { $0.name == "Shoe B" }))
 
-        #expect(a.assignments.isEmpty)
-        #expect(b.assignments.count == 1)
+        #expect(shoeA.assignments.isEmpty)
+        #expect(shoeB.assignments.count == 1)
     }
 
     @Test("Re-assigning deletes the old ShoeRunAssignment from the store")
@@ -617,11 +617,11 @@ struct RunReassignmentTests {
         try context.save()
 
         let shoes = try context.fetch(FetchDescriptor<Shoe>())
-        let a = try #require(shoes.first(where: { $0.name == "Shoe A" }))
-        let b = try #require(shoes.first(where: { $0.name == "Shoe B" }))
+        let shoeA = try #require(shoes.first(where: { $0.name == "Shoe A" }))
+        let shoeB = try #require(shoes.first(where: { $0.name == "Shoe B" }))
 
-        #expect(a.totalMileage == 0.0)
-        #expect(b.totalMileage == 8.0)
+        #expect(shoeA.totalMileage == 0.0)
+        #expect(shoeB.totalMileage == 8.0)
     }
 }
 
