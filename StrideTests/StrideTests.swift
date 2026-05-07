@@ -453,6 +453,547 @@ struct EnumTests {
     }
 }
 
+// MARK: - Slice 3: Run assignment persistence tests
+
+@Suite("Run assignment — creation")
+struct RunAssignmentCreationTests {
+
+    private func makeContainer() throws -> ModelContainer {
+        let config = ModelConfiguration(isStoredInMemoryOnly: true)
+        return try ModelContainer(for: Shoe.self, Run.self, ShoeRunAssignment.self, configurations: config)
+    }
+
+    @Test("Assigning a run creates exactly one ShoeRunAssignment in the store")
+    func assignCreatesOneRecord() throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+
+        let shoe = Shoe(name: "Clifton 9")
+        let run = makeRun(miles: 5.0)
+        context.insert(shoe)
+        context.insert(run)
+        // Simulate AssignRunView.assign(to:)
+        context.insert(ShoeRunAssignment(shoe: shoe, run: run))
+        try context.save()
+
+        let assignments = try context.fetch(FetchDescriptor<ShoeRunAssignment>())
+        #expect(assignments.count == 1)
+    }
+
+    @Test("After assignment shoe.assignments.count == 1")
+    func shoeHasOneAssignment() throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+
+        let shoe = Shoe(name: "Pegasus 41")
+        let run = makeRun(miles: 6.0)
+        context.insert(shoe)
+        context.insert(run)
+        context.insert(ShoeRunAssignment(shoe: shoe, run: run))
+        try context.save()
+
+        let fetched = try context.fetch(FetchDescriptor<Shoe>())
+        #expect(fetched[0].assignments.count == 1)
+    }
+
+    @Test("After assignment run.assignment?.shoe points to the correct shoe")
+    func runAssignmentPointsToShoe() throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+
+        let shoe = Shoe(name: "Saucony Kinvara")
+        let run = makeRun(miles: 3.1)
+        context.insert(shoe)
+        context.insert(run)
+        context.insert(ShoeRunAssignment(shoe: shoe, run: run))
+        try context.save()
+
+        let fetchedRuns = try context.fetch(FetchDescriptor<Run>())
+        #expect(fetchedRuns[0].assignment?.shoe.name == "Saucony Kinvara")
+    }
+
+    @Test("totalMileage reflects assigned run's distance immediately after assignment")
+    func totalMileageAfterSingleAssignment() throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+
+        let shoe = Shoe(name: "New Balance 1080", mileageThreshold: 400.0)
+        let run = makeRun(miles: 5.0)
+        context.insert(shoe)
+        context.insert(run)
+        context.insert(ShoeRunAssignment(shoe: shoe, run: run))
+        try context.save()
+
+        let fetched = try context.fetch(FetchDescriptor<Shoe>())
+        #expect(fetched[0].totalMileage == 5.0)
+    }
+}
+
+@Suite("Run assignment — re-assignment")
+struct RunReassignmentTests {
+
+    private func makeContainer() throws -> ModelContainer {
+        let config = ModelConfiguration(isStoredInMemoryOnly: true)
+        return try ModelContainer(for: Shoe.self, Run.self, ShoeRunAssignment.self, configurations: config)
+    }
+
+    @Test("Re-assigning removes the run from shoe A and places it on shoe B")
+    func reassignMovesRun() throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+
+        let shoeA = Shoe(name: "Shoe A")
+        let shoeB = Shoe(name: "Shoe B")
+        let run = makeRun(miles: 4.0)
+        context.insert(shoeA)
+        context.insert(shoeB)
+        context.insert(run)
+
+        // First assignment: run → shoeA
+        let first = ShoeRunAssignment(shoe: shoeA, run: run)
+        context.insert(first)
+        try context.save()
+
+        // Re-assignment (mirrors AssignRunView.assign(to:))
+        if let existing = run.assignment {
+            context.delete(existing)
+        }
+        context.insert(ShoeRunAssignment(shoe: shoeB, run: run))
+        try context.save()
+
+        let shoes = try context.fetch(FetchDescriptor<Shoe>())
+        let a = shoes.first(where: { $0.name == "Shoe A" })!
+        let b = shoes.first(where: { $0.name == "Shoe B" })!
+
+        #expect(a.assignments.count == 0)
+        #expect(b.assignments.count == 1)
+    }
+
+    @Test("Re-assigning deletes the old ShoeRunAssignment from the store")
+    func reassignDeletesOldRecord() throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+
+        let shoeA = Shoe(name: "Shoe A")
+        let shoeB = Shoe(name: "Shoe B")
+        let run = makeRun(miles: 4.0)
+        context.insert(shoeA)
+        context.insert(shoeB)
+        context.insert(run)
+        let first = ShoeRunAssignment(shoe: shoeA, run: run)
+        context.insert(first)
+        try context.save()
+
+        if let existing = run.assignment {
+            context.delete(existing)
+        }
+        context.insert(ShoeRunAssignment(shoe: shoeB, run: run))
+        try context.save()
+
+        // Only one assignment record should survive
+        let assignments = try context.fetch(FetchDescriptor<ShoeRunAssignment>())
+        #expect(assignments.count == 1)
+        #expect(assignments[0].shoe.name == "Shoe B")
+    }
+
+    @Test("totalMileage on shoe A drops to 0 after run is moved to shoe B")
+    func totalMileageAfterReassign() throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+
+        let shoeA = Shoe(name: "Shoe A")
+        let shoeB = Shoe(name: "Shoe B")
+        let run = makeRun(miles: 8.0)
+        context.insert(shoeA)
+        context.insert(shoeB)
+        context.insert(run)
+        context.insert(ShoeRunAssignment(shoe: shoeA, run: run))
+        try context.save()
+
+        if let existing = run.assignment {
+            context.delete(existing)
+        }
+        context.insert(ShoeRunAssignment(shoe: shoeB, run: run))
+        try context.save()
+
+        let shoes = try context.fetch(FetchDescriptor<Shoe>())
+        let a = shoes.first(where: { $0.name == "Shoe A" })!
+        let b = shoes.first(where: { $0.name == "Shoe B" })!
+
+        #expect(a.totalMileage == 0.0)
+        #expect(b.totalMileage == 8.0)
+    }
+}
+
+@Suite("Run assignment — unassignment")
+struct RunUnassignmentTests {
+
+    private func makeContainer() throws -> ModelContainer {
+        let config = ModelConfiguration(isStoredInMemoryOnly: true)
+        return try ModelContainer(for: Shoe.self, Run.self, ShoeRunAssignment.self, configurations: config)
+    }
+
+    @Test("Unassigning clears run.assignment")
+    func unassignClearsRunAssignment() throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+
+        let shoe = Shoe(name: "Ghost 16")
+        let run = makeRun(miles: 3.0)
+        context.insert(shoe)
+        context.insert(run)
+        context.insert(ShoeRunAssignment(shoe: shoe, run: run))
+        try context.save()
+
+        // Mirrors AssignRunView.unassign()
+        if let existing = run.assignment {
+            context.delete(existing)
+        }
+        try context.save()
+
+        let fetchedRuns = try context.fetch(FetchDescriptor<Run>())
+        #expect(fetchedRuns[0].assignment == nil)
+    }
+
+    @Test("Unassigning empties shoe.assignments")
+    func unassignEmptiesShoeAssignments() throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+
+        let shoe = Shoe(name: "Ghost 16")
+        let run = makeRun(miles: 3.0)
+        context.insert(shoe)
+        context.insert(run)
+        context.insert(ShoeRunAssignment(shoe: shoe, run: run))
+        try context.save()
+
+        if let existing = run.assignment {
+            context.delete(existing)
+        }
+        try context.save()
+
+        let fetchedShoes = try context.fetch(FetchDescriptor<Shoe>())
+        #expect(fetchedShoes[0].assignments.isEmpty)
+    }
+
+    @Test("Unassigning deletes the ShoeRunAssignment record from the store")
+    func unassignDeletesRecord() throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+
+        let shoe = Shoe(name: "Ghost 16")
+        let run = makeRun(miles: 3.0)
+        context.insert(shoe)
+        context.insert(run)
+        context.insert(ShoeRunAssignment(shoe: shoe, run: run))
+        try context.save()
+
+        if let existing = run.assignment {
+            context.delete(existing)
+        }
+        try context.save()
+
+        let assignments = try context.fetch(FetchDescriptor<ShoeRunAssignment>())
+        #expect(assignments.isEmpty)
+    }
+
+    @Test("Run record survives after its assignment is deleted")
+    func runSurvivesUnassignment() throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+
+        let shoe = Shoe(name: "Ghost 16")
+        let run = makeRun(miles: 3.0)
+        context.insert(shoe)
+        context.insert(run)
+        context.insert(ShoeRunAssignment(shoe: shoe, run: run))
+        try context.save()
+
+        if let existing = run.assignment {
+            context.delete(existing)
+        }
+        try context.save()
+
+        let runs = try context.fetch(FetchDescriptor<Run>())
+        #expect(runs.count == 1)
+    }
+}
+
+@Suite("Run assignment — totalMileage accumulation")
+struct AssignmentMileageAccumulationTests {
+
+    private func makeContainer() throws -> ModelContainer {
+        let config = ModelConfiguration(isStoredInMemoryOnly: true)
+        return try ModelContainer(for: Shoe.self, Run.self, ShoeRunAssignment.self, configurations: config)
+    }
+
+    @Test("Shoe starts at 0 mi before any assignment")
+    func zeroBeforeAssignment() throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+
+        let shoe = Shoe(name: "Fresh Shoe")
+        context.insert(shoe)
+        try context.save()
+
+        let fetched = try context.fetch(FetchDescriptor<Shoe>())
+        #expect(fetched[0].totalMileage == 0.0)
+    }
+
+    @Test("Assigning a 5 mi run gives totalMileage == 5.0")
+    func singleRunFiveMiles() throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+
+        let shoe = Shoe(name: "Accumulator")
+        let run = makeRun(miles: 5.0)
+        context.insert(shoe)
+        context.insert(run)
+        context.insert(ShoeRunAssignment(shoe: shoe, run: run))
+        try context.save()
+
+        let fetched = try context.fetch(FetchDescriptor<Shoe>())
+        #expect(fetched[0].totalMileage == 5.0)
+    }
+
+    @Test("Assigning a second 3 mi run gives totalMileage == 8.0")
+    func twoRunsAccumulate() throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+
+        let shoe = Shoe(name: "Accumulator")
+        let run1 = makeRun(miles: 5.0)
+        let run2 = makeRun(miles: 3.0)
+        context.insert(shoe)
+        context.insert(run1)
+        context.insert(run2)
+        context.insert(ShoeRunAssignment(shoe: shoe, run: run1))
+        context.insert(ShoeRunAssignment(shoe: shoe, run: run2))
+        try context.save()
+
+        let fetched = try context.fetch(FetchDescriptor<Shoe>())
+        #expect(fetched[0].totalMileage == 8.0)
+    }
+
+    @Test("totalMileage drops back to 5.0 after second run is unassigned")
+    func mileageDropsAfterUnassign() throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+
+        let shoe = Shoe(name: "Accumulator")
+        let run1 = makeRun(miles: 5.0)
+        let run2 = makeRun(miles: 3.0)
+        context.insert(shoe)
+        context.insert(run1)
+        context.insert(run2)
+        let a1 = ShoeRunAssignment(shoe: shoe, run: run1)
+        let a2 = ShoeRunAssignment(shoe: shoe, run: run2)
+        context.insert(a1)
+        context.insert(a2)
+        try context.save()
+
+        // Unassign run2
+        if let existing = run2.assignment {
+            context.delete(existing)
+        }
+        try context.save()
+
+        let fetched = try context.fetch(FetchDescriptor<Shoe>())
+        #expect(fetched[0].totalMileage == 5.0)
+    }
+}
+
+@Suite("Run assignment — warningState after assignment")
+struct AssignmentWarningStateTests {
+
+    private func makeContainer() throws -> ModelContainer {
+        let config = ModelConfiguration(isStoredInMemoryOnly: true)
+        return try ModelContainer(for: Shoe.self, Run.self, ShoeRunAssignment.self, configurations: config)
+    }
+
+    @Test("Assigning 90 mi run to 100 mi threshold shoe → .approaching")
+    func ninetyMilesIsApproaching() throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+
+        let shoe = Shoe(name: "Warning Shoe", mileageThreshold: 100.0)
+        let run = makeRun(miles: 90.0)
+        context.insert(shoe)
+        context.insert(run)
+        context.insert(ShoeRunAssignment(shoe: shoe, run: run))
+        try context.save()
+
+        let fetched = try context.fetch(FetchDescriptor<Shoe>())
+        #expect(fetched[0].warningState == .approaching)
+    }
+
+    @Test("Assigning additional 10 mi to a shoe already at 90 mi → .exceeded")
+    func crossingThresholdTriggersExceeded() throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+
+        let shoe = Shoe(name: "Warning Shoe", mileageThreshold: 100.0)
+        let run1 = makeRun(miles: 90.0)
+        let run2 = makeRun(miles: 10.0)
+        context.insert(shoe)
+        context.insert(run1)
+        context.insert(run2)
+        context.insert(ShoeRunAssignment(shoe: shoe, run: run1))
+        try context.save()
+
+        // Confirm approaching before the second assignment
+        #expect(shoe.warningState == .approaching)
+
+        context.insert(ShoeRunAssignment(shoe: shoe, run: run2))
+        try context.save()
+
+        let fetched = try context.fetch(FetchDescriptor<Shoe>())
+        #expect(fetched[0].warningState == .exceeded)
+    }
+
+    @Test("Shoe stays .ok when mileage is well below threshold")
+    func belowThresholdIsOk() throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+
+        let shoe = Shoe(name: "Fresh Shoe", mileageThreshold: 400.0)
+        let run = makeRun(miles: 50.0)
+        context.insert(shoe)
+        context.insert(run)
+        context.insert(ShoeRunAssignment(shoe: shoe, run: run))
+        try context.save()
+
+        let fetched = try context.fetch(FetchDescriptor<Shoe>())
+        #expect(fetched[0].warningState == .ok)
+    }
+
+    @Test("warningState returns to .ok after an exceeding run is unassigned")
+    func warningClearsAfterUnassign() throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+
+        let shoe = Shoe(name: "Yo-Yo Shoe", mileageThreshold: 100.0)
+        let run = makeRun(miles: 100.0)
+        context.insert(shoe)
+        context.insert(run)
+        context.insert(ShoeRunAssignment(shoe: shoe, run: run))
+        try context.save()
+
+        #expect(shoe.warningState == .exceeded)
+
+        if let existing = run.assignment {
+            context.delete(existing)
+        }
+        try context.save()
+
+        let fetched = try context.fetch(FetchDescriptor<Shoe>())
+        #expect(fetched[0].warningState == .ok)
+    }
+}
+
+@Suite("Run assignment — cascade delete with assignments")
+struct AssignmentCascadeDeleteTests {
+
+    private func makeContainer() throws -> ModelContainer {
+        let config = ModelConfiguration(isStoredInMemoryOnly: true)
+        return try ModelContainer(for: Shoe.self, Run.self, ShoeRunAssignment.self, configurations: config)
+    }
+
+    @Test("Deleting a shoe with one assignment cascade-deletes the assignment")
+    func deleteShoeWithOneAssignment() throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+
+        let shoe = Shoe(name: "Doomed Shoe")
+        let run = makeRun(miles: 7.5)
+        context.insert(shoe)
+        context.insert(run)
+        context.insert(ShoeRunAssignment(shoe: shoe, run: run))
+        try context.save()
+
+        context.delete(shoe)
+        try context.save()
+
+        let shoes = try context.fetch(FetchDescriptor<Shoe>())
+        let assignments = try context.fetch(FetchDescriptor<ShoeRunAssignment>())
+        #expect(shoes.isEmpty)
+        #expect(assignments.isEmpty)
+    }
+
+    @Test("Deleting a shoe with multiple assignments cascade-deletes all of them")
+    func deleteShoeWithMultipleAssignments() throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+
+        let shoe = Shoe(name: "Multi-Run Shoe")
+        let run1 = makeRun(miles: 3.0)
+        let run2 = makeRun(miles: 5.0)
+        let run3 = makeRun(miles: 8.0)
+        context.insert(shoe)
+        context.insert(run1)
+        context.insert(run2)
+        context.insert(run3)
+        context.insert(ShoeRunAssignment(shoe: shoe, run: run1))
+        context.insert(ShoeRunAssignment(shoe: shoe, run: run2))
+        context.insert(ShoeRunAssignment(shoe: shoe, run: run3))
+        try context.save()
+
+        context.delete(shoe)
+        try context.save()
+
+        let assignments = try context.fetch(FetchDescriptor<ShoeRunAssignment>())
+        #expect(assignments.isEmpty)
+    }
+
+    @Test("Deleting a shoe with assignments leaves the Run records intact")
+    func runRecordsSurviveShoeDelete() throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+
+        let shoe = Shoe(name: "Doomed Shoe")
+        let run = makeRun(miles: 7.5)
+        context.insert(shoe)
+        context.insert(run)
+        context.insert(ShoeRunAssignment(shoe: shoe, run: run))
+        try context.save()
+
+        context.delete(shoe)
+        try context.save()
+
+        let runs = try context.fetch(FetchDescriptor<Run>())
+        #expect(runs.count == 1)
+        #expect(runs[0].assignment == nil)
+    }
+
+    @Test("Only the deleted shoe's assignments are removed; other shoes' assignments survive")
+    func otherShoeAssignmentsUnaffected() throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+
+        let shoeA = Shoe(name: "Doomed Shoe A")
+        let shoeB = Shoe(name: "Survivor Shoe B")
+        let run1 = makeRun(miles: 4.0)
+        let run2 = makeRun(miles: 6.0)
+        context.insert(shoeA)
+        context.insert(shoeB)
+        context.insert(run1)
+        context.insert(run2)
+        context.insert(ShoeRunAssignment(shoe: shoeA, run: run1))
+        context.insert(ShoeRunAssignment(shoe: shoeB, run: run2))
+        try context.save()
+
+        context.delete(shoeA)
+        try context.save()
+
+        let shoes = try context.fetch(FetchDescriptor<Shoe>())
+        let assignments = try context.fetch(FetchDescriptor<ShoeRunAssignment>())
+        #expect(shoes.count == 1)
+        #expect(shoes[0].name == "Survivor Shoe B")
+        #expect(assignments.count == 1)
+        #expect(assignments[0].shoe.name == "Survivor Shoe B")
+    }
+}
+
 // MARK: - Helpers
 
 private func makeRun(miles: Double) -> Run {
