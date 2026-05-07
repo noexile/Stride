@@ -3,6 +3,7 @@ import SwiftData
 
 struct ShoeDetailView: View {
     let shoe: Shoe
+    @State private var showingEdit = false
 
     var body: some View {
         List {
@@ -34,6 +35,14 @@ struct ShoeDetailView: View {
         }
         .navigationTitle(shoe.name)
         .navigationBarTitleDisplayMode(.large)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button("Edit") { showingEdit = true }
+            }
+        }
+        .sheet(isPresented: $showingEdit) {
+            EditShoeView(shoe: shoe)
+        }
     }
 }
 
