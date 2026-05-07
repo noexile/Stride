@@ -994,6 +994,112 @@ struct AssignmentCascadeDeleteTests {
     }
 }
 
+// MARK: - AddShoeViewModel.save(context:)
+
+@Suite("AddShoeViewModel — save behaviour")
+struct AddShoeSaveTests {
+
+    private func makeContainer() throws -> ModelContainer {
+        let config = ModelConfiguration(isStoredInMemoryOnly: true)
+        return try ModelContainer(for: Shoe.self, Run.self, ShoeRunAssignment.self, configurations: config)
+    }
+
+    @Test("save() inserts a shoe with the trimmed name into the context")
+    func saveInsertsTrimmedName() throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+
+        let vm = AddShoeViewModel()
+        vm.name = "  Pegasus 41  "   // leading/trailing whitespace must be stripped
+        vm.save(context: context)
+        try context.save()
+
+        let results = try context.fetch(FetchDescriptor<Shoe>())
+        #expect(results.count == 1)
+        #expect(results[0].name == "Pegasus 41")
+    }
+
+    @Test("save() stores the purchaseDate and mileageThreshold set on the ViewModel")
+    func saveStoresPurchaseDateAndThreshold() throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+
+        let customDate = Date(timeIntervalSince1970: 1_700_000_000)
+        let vm = AddShoeViewModel()
+        vm.name = "Clifton 9"
+        vm.purchaseDate = customDate
+        vm.mileageThreshold = 350.0
+        vm.save(context: context)
+        try context.save()
+
+        let results = try context.fetch(FetchDescriptor<Shoe>())
+        #expect(results.count == 1)
+        #expect(results[0].purchaseDate == customDate)
+        #expect(results[0].mileageThreshold == 350.0)
+    }
+
+    @Test("after save() the context contains exactly one shoe with the correct name")
+    func saveProducesExactlyOneShoe() throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+
+        let vm = AddShoeViewModel()
+        vm.name = "Ghost 16"
+        vm.save(context: context)
+        try context.save()
+
+        let results = try context.fetch(FetchDescriptor<Shoe>())
+        #expect(results.count == 1)
+        #expect(results[0].name == "Ghost 16")
+    }
+}
+
+// MARK: - AssignRunView — retired shoes excluded from picker
+
+@Suite("AssignRunView — active-shoe filter")
+struct ActiveShoeFilterTests {
+
+    private func makeContainer() throws -> ModelContainer {
+        let config = ModelConfiguration(isStoredInMemoryOnly: true)
+        return try ModelContainer(for: Shoe.self, Run.self, ShoeRunAssignment.self, configurations: config)
+    }
+
+    @Test("Filter returns only the active shoe when one active and one retired shoe exist")
+    func filterExcludesRetiredShoe() throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+
+        let active  = Shoe(name: "Active Shoe",  status: .active)
+        let retired = Shoe(name: "Retired Shoe", status: .retired)
+        context.insert(active)
+        context.insert(retired)
+        try context.save()
+
+        let allShoes = try context.fetch(FetchDescriptor<Shoe>())
+        // This mirrors the filter in AssignRunView.body:
+        // let activeShoes = shoes.filter { $0.status == .active }
+        let activeShoes = allShoes.filter { $0.status == .active }
+
+        #expect(activeShoes.count == 1)
+        #expect(activeShoes[0].name == "Active Shoe")
+    }
+
+    @Test("Filter returns no shoes when all shoes are retired")
+    func filterReturnsEmptyWhenAllRetired() throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+
+        context.insert(Shoe(name: "Retired A", status: .retired))
+        context.insert(Shoe(name: "Retired B", status: .retired))
+        try context.save()
+
+        let allShoes = try context.fetch(FetchDescriptor<Shoe>())
+        let activeShoes = allShoes.filter { $0.status == .active }
+
+        #expect(activeShoes.isEmpty)
+    }
+}
+
 // MARK: - Helpers
 
 private func makeRun(miles: Double) -> Run {
