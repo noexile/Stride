@@ -561,12 +561,12 @@ struct RunReassignmentTests {
         context.insert(ShoeRunAssignment(shoe: shoeB, run: run))
         try context.save()
 
-        let shoes = try context.fetch(FetchDescriptor<Shoe>())
-        let shoeA = try #require(shoes.first(where: { $0.name == "Shoe A" }))
-        let shoeB = try #require(shoes.first(where: { $0.name == "Shoe B" }))
+        let fetched = try context.fetch(FetchDescriptor<Shoe>())
+        let fetchedA = try #require(fetched.first(where: { $0.name == "Shoe A" }))
+        let fetchedB = try #require(fetched.first(where: { $0.name == "Shoe B" }))
 
-        #expect(shoeA.assignments.isEmpty)
-        #expect(shoeB.assignments.count == 1)
+        #expect(fetchedA.assignments.isEmpty)
+        #expect(fetchedB.assignments.count == 1)
     }
 
     @Test("Re-assigning deletes the old ShoeRunAssignment from the store")
@@ -616,12 +616,12 @@ struct RunReassignmentTests {
         context.insert(ShoeRunAssignment(shoe: shoeB, run: run))
         try context.save()
 
-        let shoes = try context.fetch(FetchDescriptor<Shoe>())
-        let shoeA = try #require(shoes.first(where: { $0.name == "Shoe A" }))
-        let shoeB = try #require(shoes.first(where: { $0.name == "Shoe B" }))
+        let fetched = try context.fetch(FetchDescriptor<Shoe>())
+        let fetchedA = try #require(fetched.first(where: { $0.name == "Shoe A" }))
+        let fetchedB = try #require(fetched.first(where: { $0.name == "Shoe B" }))
 
-        #expect(shoeA.totalMileage == 0.0)
-        #expect(shoeB.totalMileage == 8.0)
+        #expect(fetchedA.totalMileage == 0.0)
+        #expect(fetchedB.totalMileage == 8.0)
     }
 }
 
