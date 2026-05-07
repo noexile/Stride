@@ -57,7 +57,9 @@ struct SettingsView: View {
 
                 Section("About") {
                     LabeledContent("Version", value: appVersion)
-                    Link("Privacy Policy", destination: URL(string: "https://github.com/noexile/Stride")!)
+                    if let privacyURL = URL(string: "https://github.com/noexile/Stride") {
+                        Link("Privacy Policy", destination: privacyURL)
+                    }
                 }
             }
             .navigationTitle("Settings")
