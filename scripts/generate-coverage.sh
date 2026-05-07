@@ -37,7 +37,7 @@ xcodebuild test \
   -derivedDataPath "$DERIVED_DATA" \
   -enableCodeCoverage YES \
   -resultBundlePath "$RESULT_BUNDLE" \
-  | xcpretty || true
+  2>&1 | grep -E "^(Build|Compile|Test|error:|warning: |FAILED|Executed|Stride)" || true
 
 echo "▶ Extracting coverage JSON..."
 xcrun xccov view \

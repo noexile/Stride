@@ -18,22 +18,27 @@ jobs:
         run: |
           XCODE=$(ls /Applications | grep '^Xcode' | sort -r | head -1)
           sudo xcode-select -s "/Applications/$XCODE/Contents/Developer"
-          echo "Selected: $(xcode-select -p)"
           xcodebuild -version
 
-      - name: Show available simulators
-        run: |
-          xcrun simctl list runtimes
-          xcrun simctl list devices available | grep -E "iPhone|iPad" | head -10
+      - name: Cache DerivedData
+        uses: actions/cache@v4
+        with:
+          path: DerivedData
+          key: derived-data-${{ runner.os }}-${{ hashFiles('Stride.xcodeproj/project.pbxproj', 'Stride/**/*.swift', 'StrideTests/**/*.swift', 'StrideUITests/**/*.swift') }}
+          restore-keys: |
+            derived-data-${{ runner.os }}-
 
-      - name: Install xcpretty
-        run: gem install xcpretty --no-document
-
-      - name: Build & test with coverage
-        run: ./scripts/generate-coverage.sh
+      - name: Cache sonar-scanner
+        uses: actions/cache@v4
+        with:
+          path: ~/Library/Caches/Homebrew/downloads
+          key: brew-sonar-scanner-${{ runner.os }}
 
       - name: Install sonar-scanner
         run: brew install sonar-scanner
+
+      - name: Build & test with coverage
+        run: ./scripts/generate-coverage.sh
 
       - name: SonarCloud scan
         run: sonar-scanner -Dsonar.host.url=https://sonarcloud.io
