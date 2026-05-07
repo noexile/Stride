@@ -33,11 +33,14 @@ struct RunsView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \Run.startDate, order: .reverse) private var runs: [Run]
     @State private var viewModel = RunsSyncViewModel()
+    @State private var assigningRun: Run?
 
     var body: some View {
         NavigationStack {
             List(runs) { run in
                 RunRowView(run: run)
+                    .contentShape(Rectangle())
+                    .onTapGesture { assigningRun = run }
             }
             .navigationTitle("Runs")
             .toolbar {
@@ -62,6 +65,9 @@ struct RunsView: View {
                         description: Text("Tap ↻ to import runs from HealthKit.")
                     )
                 }
+            }
+            .sheet(item: $assigningRun) { run in
+                AssignRunView(run: run)
             }
             .alert("Sync Error", isPresented: .constant(viewModel.errorMessage != nil)) {
                 Button("OK") { viewModel.errorMessage = nil }
@@ -88,13 +94,20 @@ private struct RunRowView: View {
                     .foregroundStyle(.secondary)
             }
             HStack(spacing: 8) {
-                if let source = run.sourceName {
-                    Text(source)
+                if let shoe = run.assignment?.shoe {
+                    Label(shoe.name, systemImage: "shoeprints.fill")
+                        .font(.caption)
+                        .foregroundStyle(.tint)
+                } else {
+                    Text("Tap to assign shoe")
                         .font(.caption)
                         .foregroundStyle(.tertiary)
                 }
-                if let surface = run.wearSurface {
-                    Text(surface.rawValue.capitalized)
+                if let source = run.sourceName {
+                    Text("·")
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                    Text(source)
                         .font(.caption)
                         .foregroundStyle(.tertiary)
                 }

@@ -17,9 +17,14 @@ struct ShoeListView: View {
         NavigationStack {
             List {
                 ForEach(shoes) { shoe in
-                    ShoeRowView(shoe: shoe)
+                    NavigationLink(value: shoe) {
+                        ShoeRowView(shoe: shoe)
+                    }
                 }
                 .onDelete(perform: deleteShoes)
+            }
+            .navigationDestination(for: Shoe.self) { shoe in
+                ShoeDetailView(shoe: shoe)
             }
             .navigationTitle("My Shoes")
             .toolbar {
